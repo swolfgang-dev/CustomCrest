@@ -2,7 +2,7 @@ using BepInEx.Configuration;
 using System;
 using System.Linq;
 
-namespace CustomCrest
+namespace CrestLoadouts
 {
     internal sealed class AcceptableEnumList<T> : AcceptableValueBase where T : Enum
     {

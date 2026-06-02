@@ -1,6 +1,6 @@
-# Custom Crest
+# Crest Loadouts
 
-Custom Crest is a BepInEx/Harmony mod for Hollow Knight: Silksong.
+Crest Loadouts is a BepInEx/Harmony mod for Hollow Knight: Silksong.
 
 This is a clean rebuild scaffold. It currently loads, compiles, and exposes attack-source config entries.
 
@@ -10,7 +10,7 @@ The equipped crest should continue to control tool slots and binding type. This 
 
 ## Config
 
-Settings appear under `Custom Crest` in Configuration Manager.
+Settings appear under `Crest Loadouts` in Configuration Manager.
 
 Global settings apply to every save. Save-specific settings apply only to the active save through Save Scoped Config. A save-specific attack source overrides the global source when it is not `SelectedCrest`.
 
@@ -26,17 +26,17 @@ Global settings apply to every save. Save-specific settings apply only to the ac
 From the game directory:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\ModDev\CustomCrest\build.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\ModDev\CrestLoadouts\build.ps1
 ```
 
 The default build target is development mode:
 
 ```text
-BepInEx/scripts/CustomCrest.dll
+BepInEx/scripts/CrestLoadouts.dll
 ```
 
 For a normal BepInEx plugin install:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\ModDev\CustomCrest\build.ps1 -Target Plugin
+powershell.exe -ExecutionPolicy Bypass -File .\ModDev\CrestLoadouts\build.ps1 -Target Plugin
 ```

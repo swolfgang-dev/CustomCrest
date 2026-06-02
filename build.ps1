@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $gameDir = Resolve-Path (Join-Path $projectDir "..\..")
 $outputDir = if ($Target -eq "Plugin") {
-    Join-Path $gameDir "BepInEx\plugins\CustomCrest"
+    Join-Path $gameDir "BepInEx\plugins\CrestLoadouts"
 } else {
     Join-Path $gameDir "BepInEx\scripts"
 }
@@ -26,7 +26,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "SaveScopedConfig build failed with exit code $LASTEXITCODE"
 }
 
-dotnet build "$projectDir\CustomCrest.csproj" `
+dotnet build "$projectDir\CrestLoadouts.csproj" `
     --configuration Release `
     --nologo `
     -p:OutDir="$outputDir\"
@@ -35,7 +35,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Build failed with exit code $LASTEXITCODE"
 }
 
-$depsFile = Join-Path $outputDir "CustomCrest.deps.json"
+$depsFile = Join-Path $outputDir "CrestLoadouts.deps.json"
 if (Test-Path -LiteralPath $depsFile) {
     Remove-Item -LiteralPath $depsFile -Force
 }
@@ -61,4 +61,4 @@ if (Test-Path -LiteralPath $scriptSaveScopedPdb) {
 }
 
 Write-Host "Built $(Join-Path $dependencyDir 'SaveScopedConfig.dll')"
-Write-Host "Built $(Join-Path $outputDir 'CustomCrest.dll')"
+Write-Host "Built $(Join-Path $outputDir 'CrestLoadouts.dll')"

@@ -6,12 +6,12 @@ using System.Reflection;
 using TMProOld;
 using UnityEngine;
 
-namespace CustomCrest
+namespace CrestLoadouts
 {
     internal sealed class InventoryAttackSourcePanel : MonoBehaviour
     {
-        private const string PanelName = "CustomCrestAttackSourcePanel";
-        private const string AttackPromptName = "CustomCrestAttackSourcePrompt";
+        private const string PanelName = "CrestLoadoutsAttackSourcePanel";
+        private const string AttackPromptName = "CrestLoadoutsAttackSourcePrompt";
         private const string AttackPromptText = "Change Attacks";
         private const string DefaultPromptText = "Set to Default";
         private static readonly Vector3 PanelLocalPosition = new Vector3(-0.2f, -4.72f, -0.25f);
@@ -116,8 +116,6 @@ namespace CustomCrest
         private Transform sourcePromptIconTransform;
         private GameObject comboButtonPromptObject;
         private GameObject crestComboButtonPromptObject;
-        private bool? crestComboButtonPromptVisibleBeforeHide;
-        private bool crestComboButtonPromptHiddenForAttackPanel;
         private Vector3 attackPromptControllerIconScale = Vector3.one;
         private HeroActionButton attackPromptKeyboardAction = HeroActionButton.MENU_SUBMIT;
         private bool? attackPromptIconKeyboardState;
@@ -244,7 +242,7 @@ namespace CustomCrest
         {
             if (openPanel != null && openPanel.IsAttackSwitcherVisible)
             {
-                Plugin.Log?.LogInfo("Custom Crest closing open attack switcher from openPanel.");
+                Plugin.Log?.LogInfo("Crest Loadouts closing open attack switcher from openPanel.");
                 openPanel.CloseAttackSwitcher(true);
                 return true;
             }
@@ -258,7 +256,7 @@ namespace CustomCrest
                     continue;
                 }
 
-                Plugin.Log?.LogInfo("Custom Crest closing open attack switcher from scan: " + GetTransformPath(panel.transform));
+                Plugin.Log?.LogInfo("Crest Loadouts closing open attack switcher from scan: " + GetTransformPath(panel.transform));
                 panel.CloseAttackSwitcher(true);
                 return true;
             }
@@ -309,7 +307,7 @@ namespace CustomCrest
             if (panel == null || panel.crestList == null)
             {
                 Plugin.Log?.LogInfo(
-                    "Custom Crest apply from attack switcher skipped: panel=" + (panel == null ? "<null>" : GetTransformPath(panel.transform)) +
+                    "Crest Loadouts apply from attack switcher skipped: panel=" + (panel == null ? "<null>" : GetTransformPath(panel.transform)) +
                     ", crestList=" + (panel == null || panel.crestList == null ? "<null>" : GetTransformPath(panel.crestList.transform)));
                 return false;
             }
@@ -317,14 +315,14 @@ namespace CustomCrest
             string beforeEquipped = Plugin.GetEquippedCrestId();
             string currentCrest = panel.crestList.CurrentCrest == null ? "<null>" : panel.crestList.CurrentCrest.gameObject.name;
             Plugin.Log?.LogInfo(
-                "Custom Crest apply from attack switcher: currentCrest=" + currentCrest +
+                "Crest Loadouts apply from attack switcher: currentCrest=" + currentCrest +
                 ", selectedCrestId=" + panel.SelectedCrestId +
                 ", equippedBefore=" + beforeEquipped +
                 ", isSwitching=" + panel.crestList.IsSwitchingCrests);
             panel.CloseAttackSwitcher(false);
             panel.crestList.StopSwitchingCrests(true);
             Plugin.Log?.LogInfo(
-                "Custom Crest apply from attack switcher complete: equippedAfter=" + Plugin.GetEquippedCrestId() +
+                "Crest Loadouts apply from attack switcher complete: equippedAfter=" + Plugin.GetEquippedCrestId() +
                 ", isSwitching=" + panel.crestList.IsSwitchingCrests);
             return true;
         }
@@ -342,13 +340,13 @@ namespace CustomCrest
             string beforeEquipped = Plugin.GetEquippedCrestId();
             string currentCrest = panel.crestList.CurrentCrest == null ? "<null>" : panel.crestList.CurrentCrest.gameObject.name;
             Plugin.Log?.LogInfo(
-                "Custom Crest preparing vanilla submit from attack switcher: currentCrest=" + currentCrest +
+                "Crest Loadouts preparing vanilla submit from attack switcher: currentCrest=" + currentCrest +
                 ", selectedCrestId=" + panel.SelectedCrestId +
                 ", equippedBefore=" + beforeEquipped +
                 ", isSwitching=" + panel.crestList.IsSwitchingCrests);
             panel.pendingVanillaCrestApplyFrame = Time.frameCount + 1;
             Plugin.Log?.LogInfo(
-                "Custom Crest prepared vanilla submit from attack switcher: attackSwitcherOpen=" + IsAnyAttackSwitcherOpen +
+                "Crest Loadouts prepared vanilla submit from attack switcher: attackSwitcherOpen=" + IsAnyAttackSwitcherOpen +
                 ", isSwitching=" + panel.crestList.IsSwitchingCrests +
                 ", pendingApplyFrame=" + panel.pendingVanillaCrestApplyFrame);
             return true;
@@ -491,7 +489,7 @@ namespace CustomCrest
             pendingVanillaCrestApplyFrame = -1;
             if (CrestListApplyCurrentCrestMethod == null || CrestListIsWaitingForApplyField == null)
             {
-                Plugin.Log?.LogWarning("Custom Crest cannot run pending vanilla crest apply: crest apply reflection failed.");
+                Plugin.Log?.LogWarning("Crest Loadouts cannot run pending vanilla crest apply: crest apply reflection failed.");
                 return false;
             }
 
@@ -503,7 +501,7 @@ namespace CustomCrest
             string currentCrest = currentCrestObject == null ? "<null>" : currentCrestObject.gameObject.name;
             string previousCrest = previousEquippedCrest == null ? "<null>" : previousEquippedCrest.gameObject.name;
             Plugin.Log?.LogInfo(
-                "Custom Crest running pending vanilla crest equip: scheduledFrame=" + applyFrame +
+                "Crest Loadouts running pending vanilla crest equip: scheduledFrame=" + applyFrame +
                 ", frame=" + Time.frameCount +
                 ", currentCrest=" + currentCrest +
                 ", previousEquippedCrest=" + previousCrest +
@@ -524,7 +522,7 @@ namespace CustomCrest
             CrestListQueuedPaneEndedField?.SetValue(crestList, false);
             CrestListWasChangeCrestButtonPressedField?.SetValue(crestList, false);
             Plugin.Log?.LogInfo(
-                "Custom Crest pending vanilla crest equip started: equippedAfter=" + Plugin.GetEquippedCrestId() +
+                "Crest Loadouts pending vanilla crest equip started: equippedAfter=" + Plugin.GetEquippedCrestId() +
                 ", isSwitching=" + crestList.IsSwitchingCrests);
             return true;
         }
@@ -543,7 +541,7 @@ namespace CustomCrest
 
             pendingVanillaCrestCommitTime = Time.unscaledTime + (usePostEquipHold ? PostEquipAttackPanelHoldSeconds : 0f);
             Plugin.Log?.LogInfo(
-                "Custom Crest holding attack panel after equip animation: commitTime=" + pendingVanillaCrestCommitTime +
+                "Crest Loadouts holding attack panel after equip animation: commitTime=" + pendingVanillaCrestCommitTime +
                 ", currentTime=" + Time.unscaledTime +
                 ", usePostEquipHold=" + usePostEquipHold +
                 ", isSwitching=" + crestList.IsSwitchingCrests);
@@ -563,14 +561,14 @@ namespace CustomCrest
             }
 
             Plugin.Log?.LogInfo(
-                "Custom Crest applying crest after post-animation hold: equippedBefore=" + Plugin.GetEquippedCrestId() +
+                "Crest Loadouts applying crest after post-animation hold: equippedBefore=" + Plugin.GetEquippedCrestId() +
                 ", isSwitching=" + crestList.IsSwitchingCrests);
             followCrestDescriptionClose = true;
             CrestListApplyCurrentCrestMethod.Invoke(crestList, null);
             SetCrestDescriptionVisible(false);
 
             Plugin.Log?.LogInfo(
-                "Custom Crest applied crest after post-animation hold: equippedAfter=" + Plugin.GetEquippedCrestId() +
+                "Crest Loadouts applied crest after post-animation hold: equippedAfter=" + Plugin.GetEquippedCrestId() +
                 ", isSwitching=" + (crestList != null && crestList.IsSwitchingCrests) +
                 ", followCrestDescriptionClose=" + followCrestDescriptionClose +
                 ", crestSwitchSequenceRunning=" + IsCrestSwitchSequenceRunning() +
@@ -601,14 +599,13 @@ namespace CustomCrest
                 followCrestDescriptionClose = false;
                 suppressCrestDescriptionUntilTime = Time.unscaledTime + PostCloseDescriptionSuppressSeconds;
                 Plugin.Log?.LogInfo(
-                    "Custom Crest suppressing crest description after close until " + suppressCrestDescriptionUntilTime +
+                    "Crest Loadouts suppressing crest description after close until " + suppressCrestDescriptionUntilTime +
                     " currentTime=" + Time.unscaledTime);
             }
 
             if (!ShouldSuppressCrestDescriptionAfterClose)
             {
                 suppressCrestDescriptionUntilTime = -1f;
-                ClearCrestComboButtonPromptRestoreState();
                 return false;
             }
 
@@ -630,7 +627,7 @@ namespace CustomCrest
             }
             catch (Exception ex)
             {
-                Plugin.Log?.LogWarning("Custom Crest could not play vanilla crest exit audio: " + ex.Message);
+                Plugin.Log?.LogWarning("Crest Loadouts could not play vanilla crest exit audio: " + ex.Message);
             }
         }
 
@@ -717,7 +714,7 @@ namespace CustomCrest
         private void CloseAttackSwitcher(bool returnToCrest, bool restoreDescription)
         {
             Plugin.Log?.LogInfo(
-                "Custom Crest CloseAttackSwitcher: returnToCrest=" + returnToCrest +
+                "Crest Loadouts CloseAttackSwitcher: returnToCrest=" + returnToCrest +
                 ", restoreDescription=" + restoreDescription +
                 ", attackSwitcherOpen=" + attackSwitcherOpen +
                 ", anyRowActive=" + IsAnyRowActive());
@@ -847,7 +844,7 @@ namespace CustomCrest
         private void LogRightColumnPositions()
         {
             Plugin.Log?.LogInfo(
-                "Custom Crest right column positions: dash=" + GetButtonLocalPosition(dashButton) +
+                "Crest Loadouts right column positions: dash=" + GetButtonLocalPosition(dashButton) +
                 ", strike=" + GetButtonLocalPosition(needleStrikeButton));
         }
 
@@ -1529,28 +1526,11 @@ namespace CustomCrest
 
             if (!visible)
             {
-                if (IsAttackSwitcherVisible && !crestComboButtonPromptHiddenForAttackPanel)
-                {
-                    crestComboButtonPromptVisibleBeforeHide = promptObject.activeSelf;
-                    crestComboButtonPromptHiddenForAttackPanel = true;
-                }
-
                 promptObject.SetActive(false);
                 return;
             }
 
-            if (crestComboButtonPromptHiddenForAttackPanel && crestComboButtonPromptVisibleBeforeHide.HasValue)
-            {
-                promptObject.SetActive(crestComboButtonPromptVisibleBeforeHide.Value);
-            }
-
-            ClearCrestComboButtonPromptRestoreState();
-        }
-
-        private void ClearCrestComboButtonPromptRestoreState()
-        {
-            crestComboButtonPromptVisibleBeforeHide = null;
-            crestComboButtonPromptHiddenForAttackPanel = false;
+            promptObject.SetActive(IsSelectedCrestArchitect());
         }
 
         private GameObject GetCrestComboButtonPromptObject()
@@ -1565,6 +1545,11 @@ namespace CustomCrest
                 : CrestListComboButtonPromptDisplayField.GetValue(crestList) as Component;
             crestComboButtonPromptObject = promptDisplay == null ? null : promptDisplay.gameObject;
             return crestComboButtonPromptObject;
+        }
+
+        private bool IsSelectedCrestArchitect()
+        {
+            return string.Equals(Plugin.NormalizeCrestId(SelectedCrestId), "Architect", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsCrestSwitchSequenceRunning()
@@ -2179,7 +2164,7 @@ namespace CustomCrest
 
         private static InventoryAttackSourceButton CreateRow(Transform parent, TextMeshPro template, AttackSlot slot, string label, float x, float y)
         {
-            GameObject rowObject = new GameObject("CustomCrest" + label + "AttackSource");
+            GameObject rowObject = new GameObject("CrestLoadouts" + label + "AttackSource");
             Transform rowTransform = rowObject.transform;
             rowTransform.SetParent(parent, false);
 
@@ -2230,7 +2215,7 @@ namespace CustomCrest
                 string spriteName = renderer.sprite.name ?? string.Empty;
                 string path = GetTransformPath(renderer.transform);
                 string haystack = (objectName + " " + spriteName + " " + path).ToLowerInvariant();
-                if (haystack.Contains("customcrestattacksourcepanel") ||
+                if (haystack.Contains("crestloadoutsattacksourcepanel") ||
                     haystack.Contains("menu_border") ||
                     haystack.Contains("/border/menu_border"))
                 {
@@ -2299,7 +2284,7 @@ namespace CustomCrest
 
             if (best != null && bestScore > 0)
             {
-                Plugin.Log?.LogInfo("Custom Crest attack arrows using sprite '" + best.sprite.name + "' from '" + GetTransformPath(best.transform) + "'.");
+                Plugin.Log?.LogInfo("Crest Loadouts attack arrows using sprite '" + best.sprite.name + "' from '" + GetTransformPath(best.transform) + "'.");
                 return best;
             }
 
@@ -2359,11 +2344,11 @@ namespace CustomCrest
             arrowTransform.gameObject.SetActive(false);
             if (arrowRenderer.sprite == null)
             {
-                Plugin.Log?.LogWarning("Custom Crest attack arrow sprite was not found for " + name + ".");
+                Plugin.Log?.LogWarning("Crest Loadouts attack arrow sprite was not found for " + name + ".");
             }
             else if (fallbackSprite != null)
             {
-                Plugin.Log?.LogInfo("Custom Crest attack arrows using fallback sprite '" + fallbackSprite.name + "'.");
+                Plugin.Log?.LogInfo("Crest Loadouts attack arrows using fallback sprite '" + fallbackSprite.name + "'.");
             }
 
             return arrowRenderer;
@@ -2440,11 +2425,11 @@ namespace CustomCrest
             if (debugSpriteGrid != null)
             {
                 debugSpriteGrid.SetActive(true);
-                Plugin.Log?.LogInfo("Custom Crest sprite debug grid shown.");
+                Plugin.Log?.LogInfo("Crest Loadouts sprite debug grid shown.");
                 return;
             }
 
-            debugSpriteGrid = new GameObject("CustomCrestSpriteDebugGrid");
+            debugSpriteGrid = new GameObject("CrestLoadoutsSpriteDebugGrid");
             Transform gridTransform = debugSpriteGrid.transform;
             Transform debugAnchor = GetDebugGridAnchor();
             gridTransform.SetParent(debugAnchor, false);
@@ -2494,13 +2479,13 @@ namespace CustomCrest
                 renderer.color = Color.white;
                 FitDebugSprite(itemTransform, renderer);
                 Plugin.Log?.LogInfo(
-                    "Custom Crest sprite debug [" + i + "] score=" + candidate.Score +
+                    "Crest Loadouts sprite debug [" + i + "] score=" + candidate.Score +
                     " sprite='" + candidate.Sprite.name +
                     "' template='" + (candidate.Template == null ? "<none>" : GetTransformPath(candidate.Template.transform)) +
                     "' bounds=" + candidate.Sprite.bounds.size);
             }
 
-            Plugin.Log?.LogInfo("Custom Crest sprite debug grid created with " + count + " sprites.");
+            Plugin.Log?.LogInfo("Crest Loadouts sprite debug grid created with " + count + " sprites.");
         }
 
         private void RebuildDebugSpriteGrid()
@@ -2680,7 +2665,7 @@ namespace CustomCrest
         private void DumpAttackArrowDebug()
         {
             InventoryAttackSourceButton[] buttons = GetComponentsInChildren<InventoryAttackSourceButton>(true);
-            Plugin.Log?.LogInfo("Custom Crest arrow debug: buttons=" + buttons.Length + ", switcherOpen=" + IsAttackSwitcherVisible);
+            Plugin.Log?.LogInfo("Crest Loadouts arrow debug: buttons=" + buttons.Length + ", switcherOpen=" + IsAttackSwitcherVisible);
             for (int i = 0; i < buttons.Length; i++)
             {
                 InventoryAttackSourceButton button = buttons[i];
@@ -2699,7 +2684,7 @@ namespace CustomCrest
                     }
 
                     Plugin.Log?.LogInfo(
-                        "Custom Crest arrow debug: button='" + button.gameObject.name +
+                        "Crest Loadouts arrow debug: button='" + button.gameObject.name +
                         "' arrow='" + renderer.gameObject.name +
                         "' activeSelf=" + renderer.gameObject.activeSelf +
                         " activeInHierarchy=" + renderer.gameObject.activeInHierarchy +

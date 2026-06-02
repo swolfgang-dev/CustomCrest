@@ -1,4 +1,4 @@
-namespace CustomCrest
+namespace CrestLoadouts
 {
     internal enum AttackSlot
     {

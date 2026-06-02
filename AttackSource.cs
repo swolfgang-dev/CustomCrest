@@ -1,4 +1,4 @@
-namespace CustomCrest
+namespace CrestLoadouts
 {
     public enum AttackSource
     {

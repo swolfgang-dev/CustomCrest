@@ -2,7 +2,7 @@ using GlobalEnums;
 using TMProOld;
 using UnityEngine;
 
-namespace CustomCrest
+namespace CrestLoadouts
 {
     internal sealed class InventoryAttackSourceButton : InventoryItemSelectableDirectional
     {
@@ -46,7 +46,7 @@ namespace CustomCrest
 
         public override string DisplayName
         {
-            get { return "Custom Crest"; }
+            get { return "Crest Loadouts"; }
         }
 
         public override string Description

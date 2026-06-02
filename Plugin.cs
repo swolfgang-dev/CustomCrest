@@ -9,14 +9,14 @@ using TMProOld;
 using UnityEngine;
 using WheresWolfgang.SaveScopedConfig;
 
-namespace CustomCrest
+namespace CrestLoadouts
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     [BepInDependency(SaveScopedConfigPlugin.PluginGuid)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "whereswolfgang.customcrest";
-        public const string PluginName = "Custom Crest";
+        public const string PluginGuid = "whereswolfgang.crestloadouts";
+        public const string PluginName = "Crest Loadouts";
         public const string PluginVersion = "0.1.0";
 
         private static readonly Harmony Harmony = new Harmony(PluginGuid);
@@ -650,30 +650,30 @@ namespace CustomCrest
                     {
                         if (!IsBenchMessageCancelInputPressed())
                         {
-                            Log?.LogInfo("Custom Crest blocking InventoryToolCrestList.Update while attack bench message is showing.");
+                            Log?.LogInfo("Crest Loadouts blocking InventoryToolCrestList.Update while attack bench message is showing.");
                             return false;
                         }
 
                         blockNextCrestApplyAfterAttackBenchMessage = false;
-                        Log?.LogInfo("Custom Crest allowing cancel while attack bench message is showing.");
+                        Log?.LogInfo("Crest Loadouts allowing cancel while attack bench message is showing.");
                     }
                     else
                     {
                         blockNextCrestApplyAfterAttackBenchMessage = false;
-                        Log?.LogInfo("Custom Crest cleared attack bench close block after message disappeared.");
+                        Log?.LogInfo("Crest Loadouts cleared attack bench close block after message disappeared.");
                     }
                 }
 
                 if (InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen)
                 {
-                    Log?.LogInfo("Custom Crest blocking InventoryToolCrestList.Update because attack switcher is open.");
+                    Log?.LogInfo("Crest Loadouts blocking InventoryToolCrestList.Update because attack switcher is open.");
                     return false;
                 }
 
                 bool consumeCancel = InventoryAttackSourcePanel.ConsumePendingCrestSwitcherCancel();
                 if (consumeCancel)
                 {
-                    Log?.LogInfo("Custom Crest consumed pending crest switcher cancel in InventoryToolCrestList.Update.");
+                    Log?.LogInfo("Crest Loadouts consumed pending crest switcher cancel in InventoryToolCrestList.Update.");
                 }
 
                 return !consumeCancel;
@@ -691,11 +691,11 @@ namespace CustomCrest
             private static bool Prefix(InventoryToolCrestList __instance, bool keepNewSelection)
             {
                 Log?.LogInfo(
-                    "Custom Crest StopSwitchingCrests prefix: keepNewSelection=" + keepNewSelection +
+                    "Crest Loadouts StopSwitchingCrests prefix: keepNewSelection=" + keepNewSelection +
                     ", attackSwitcherOpen=" + InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen);
                 if (InventoryAttackSourcePanel.ConsumePendingCrestSwitcherCancel())
                 {
-                    Log?.LogInfo("Custom Crest StopSwitchingCrests blocked by pending cancel consumption.");
+                    Log?.LogInfo("Crest Loadouts StopSwitchingCrests blocked by pending cancel consumption.");
                     return false;
                 }
 
@@ -704,19 +704,19 @@ namespace CustomCrest
                     HideAnyCrestEquipMessage();
                     InventoryAttackSourcePanel.AttachOrRefresh(__instance);
                     blockNextCrestApplyAfterAttackBenchMessage = false;
-                    Log?.LogInfo("Custom Crest blocked crest switcher close after attack bench message fallback.");
+                    Log?.LogInfo("Crest Loadouts blocked crest switcher close after attack bench message fallback.");
                     return false;
                 }
 
                 if (!InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen)
                 {
-                    Log?.LogInfo("Custom Crest StopSwitchingCrests allowing vanilla because attack switcher is not open.");
+                    Log?.LogInfo("Crest Loadouts StopSwitchingCrests allowing vanilla because attack switcher is not open.");
                     return true;
                 }
 
                 if (keepNewSelection)
                 {
-                    Log?.LogInfo("Custom Crest StopSwitchingCrests allowing vanilla apply while attack switcher is open.");
+                    Log?.LogInfo("Crest Loadouts StopSwitchingCrests allowing vanilla apply while attack switcher is open.");
                     return true;
                 }
 
@@ -736,7 +736,7 @@ namespace CustomCrest
             {
                 string currentCrest = __instance.CurrentCrest == null ? "<null>" : __instance.CurrentCrest.gameObject.name;
                 Log?.LogInfo(
-                    "Custom Crest ApplyCurrentCrest prefix: currentCrest=" + currentCrest +
+                    "Crest Loadouts ApplyCurrentCrest prefix: currentCrest=" + currentCrest +
                     ", equippedBefore=" + GetEquippedCrestId() +
                     ", attackSwitcherOpen=" + InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen +
                     ", isSwitching=" + __instance.IsSwitchingCrests);
@@ -747,7 +747,7 @@ namespace CustomCrest
             {
                 string currentCrest = __instance.CurrentCrest == null ? "<null>" : __instance.CurrentCrest.gameObject.name;
                 Log?.LogInfo(
-                    "Custom Crest ApplyCurrentCrest postfix: currentCrest=" + currentCrest +
+                    "Crest Loadouts ApplyCurrentCrest postfix: currentCrest=" + currentCrest +
                     ", equippedAfter=" + GetEquippedCrestId() +
                     ", attackSwitcherOpen=" + InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen +
                     ", isSwitching=" + __instance.IsSwitchingCrests);
@@ -762,7 +762,7 @@ namespace CustomCrest
                 bool handled = InventoryAttackSourcePanel.CloseOpenAttackSwitcher();
                 if (handled)
                 {
-                    Log?.LogInfo("Custom Crest handled InventoryPaneInput.PressCancel by closing attack switcher.");
+                    Log?.LogInfo("Crest Loadouts handled InventoryPaneInput.PressCancel by closing attack switcher.");
                 }
 
                 return !handled;
@@ -791,7 +791,7 @@ namespace CustomCrest
                 bool prepared = InventoryAttackSourcePanel.PrepareVanillaCrestSubmitFromOpenAttackSwitcher();
                 if (prepared)
                 {
-                    Log?.LogInfo("Custom Crest scheduled vanilla crest apply from attack switcher.");
+                    Log?.LogInfo("Crest Loadouts scheduled vanilla crest apply from attack switcher.");
                 }
 
                 return !prepared;
@@ -805,7 +805,7 @@ namespace CustomCrest
                 }
 
                 blockNextCrestApplyAfterAttackBenchMessage = false;
-                Log?.LogInfo("Custom Crest cleared unused attack bench crest apply block after submit.");
+                Log?.LogInfo("Crest Loadouts cleared unused attack bench crest apply block after submit.");
             }
         }
 
@@ -819,7 +819,7 @@ namespace CustomCrest
             if (HideAnyCrestEquipMessage())
             {
                 blockNextCrestApplyAfterAttackBenchMessage = false;
-                Log?.LogInfo("Custom Crest consumed submit to close attack bench message.");
+                Log?.LogInfo("Crest Loadouts consumed submit to close attack bench message.");
                 return true;
             }
 
