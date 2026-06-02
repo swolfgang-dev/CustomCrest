@@ -58,6 +58,8 @@ namespace CustomCrest
             typeof(InventoryItemToolManager).GetField("toolList", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo ToolManagerComboButtonPromptDisplayField =
             typeof(InventoryItemToolManager).GetField("comboButtonPromptDisplay", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo CrestListComboButtonPromptDisplayField =
+            typeof(InventoryToolCrestList).GetField("comboButtonPromptDisplay", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo CrestDescriptionDisplayField =
             typeof(InventoryToolCrestList).GetField("crestDescriptionDisplay", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly MethodInfo CrestListApplyCurrentCrestMethod =
@@ -107,7 +109,15 @@ namespace CustomCrest
         private TMP_Text attackPromptIconLabel;
         private TextContainer attackPromptIconTextContainer;
         private Transform attackPromptIconTransform;
+        private Color attackPromptLabelBaseColor = Color.white;
+        private Color attackPromptIconLabelBaseColor = Color.white;
+        private TMP_Text sourcePromptLabel;
+        private TMP_Text sourcePromptIconLabel;
+        private Transform sourcePromptIconTransform;
         private GameObject comboButtonPromptObject;
+        private GameObject crestComboButtonPromptObject;
+        private bool? crestComboButtonPromptVisibleBeforeHide;
+        private bool crestComboButtonPromptHiddenForAttackPanel;
         private Vector3 attackPromptControllerIconScale = Vector3.one;
         private HeroActionButton attackPromptKeyboardAction = HeroActionButton.MENU_SUBMIT;
         private bool? attackPromptIconKeyboardState;
@@ -428,6 +438,12 @@ namespace CustomCrest
             {
                 if (IsOpenAttackSwitcherInputPressed())
                 {
+                    if (Plugin.Instance != null && !Plugin.Instance.CanChangeAttackSources())
+                    {
+                        Plugin.ShowAttackBenchMessage(GetComponentInParent<InventoryItemToolManager>());
+                        return;
+                    }
+
                     OpenAttackSwitcher();
                 }
 
@@ -501,7 +517,7 @@ namespace CustomCrest
             }
             else
             {
-                ApplyCurrentCrestAfterEquipAnimation();
+                ApplyCurrentCrestAfterEquipAnimation(false);
             }
 
             PlayVanillaCrestExitAudio();
@@ -515,15 +531,21 @@ namespace CustomCrest
 
         private void ApplyCurrentCrestAfterEquipAnimation()
         {
+            ApplyCurrentCrestAfterEquipAnimation(true);
+        }
+
+        private void ApplyCurrentCrestAfterEquipAnimation(bool usePostEquipHold)
+        {
             if (crestList == null || CrestListApplyCurrentCrestMethod == null)
             {
                 return;
             }
 
-            pendingVanillaCrestCommitTime = Time.unscaledTime + PostEquipAttackPanelHoldSeconds;
+            pendingVanillaCrestCommitTime = Time.unscaledTime + (usePostEquipHold ? PostEquipAttackPanelHoldSeconds : 0f);
             Plugin.Log?.LogInfo(
                 "Custom Crest holding attack panel after equip animation: commitTime=" + pendingVanillaCrestCommitTime +
                 ", currentTime=" + Time.unscaledTime +
+                ", usePostEquipHold=" + usePostEquipHold +
                 ", isSwitching=" + crestList.IsSwitchingCrests);
         }
 
@@ -586,6 +608,7 @@ namespace CustomCrest
             if (!ShouldSuppressCrestDescriptionAfterClose)
             {
                 suppressCrestDescriptionUntilTime = -1f;
+                ClearCrestComboButtonPromptRestoreState();
                 return false;
             }
 
@@ -673,7 +696,7 @@ namespace CustomCrest
             UpdateComboButtonPromptVisibility();
             UpdateDescriptionVisibility();
             RefreshNavigation();
-            InventoryAttackSourceButton entry = GetPreferredPanelEntry();
+            InventoryAttackSourceButton entry = GetFirstPanelEntry();
             if (entry != null)
             {
                 selectedButton = entry;
@@ -843,19 +866,19 @@ namespace CustomCrest
             switch (direction)
             {
                 case InventoryPaneBase.InputEventType.Up:
-                    if (current == downButton)
+                    if (current == neutralButton)
                     {
                         return upButton;
                     }
 
-                    if (current == neutralButton)
+                    if (current == downButton)
                     {
-                        return downButton;
+                        return neutralButton;
                     }
 
                     if (current == dashButton)
                     {
-                        return neutralButton;
+                        return downButton;
                     }
 
                     if (current == needleStrikeButton)
@@ -867,15 +890,15 @@ namespace CustomCrest
                 case InventoryPaneBase.InputEventType.Down:
                     if (current == upButton)
                     {
-                        return downButton;
-                    }
-
-                    if (current == downButton)
-                    {
                         return neutralButton;
                     }
 
                     if (current == neutralButton)
+                    {
+                        return downButton;
+                    }
+
+                    if (current == downButton)
                     {
                         return dashButton;
                     }
@@ -939,6 +962,7 @@ namespace CustomCrest
                 return;
             }
 
+            sourcePromptLabel = selectText;
             attackPrompt = new GameObject(AttackPromptName);
             Transform promptTransform = attackPrompt.transform;
             promptTransform.SetParent(selectText.transform.parent, false);
@@ -951,11 +975,18 @@ namespace CustomCrest
             clonedText.gameObject.name = "Text";
             clonedText.transform.localPosition = selectText.transform.localPosition + AttackPromptOffset;
             attackPromptLabel = clonedText;
+            attackPromptLabelBaseColor = clonedText.color;
             SetClonedPromptText();
 
             Transform iconTemplate = FindSelectCrestActionIcon(selectText.transform);
             if (iconTemplate != null)
             {
+                sourcePromptIconTransform = iconTemplate;
+                ActionButtonIcon sourceIcon = iconTemplate.GetComponent<ActionButtonIcon>();
+                sourcePromptIconLabel = ActionButtonIconLabelField == null || sourceIcon == null
+                    ? null
+                    : ActionButtonIconLabelField.GetValue(sourceIcon) as TMP_Text;
+
                 Transform clonedIcon = Instantiate(iconTemplate, promptTransform, false);
                 clonedIcon.gameObject.name = "Icon";
                 attackPromptIconTransform = clonedIcon;
@@ -970,6 +1001,7 @@ namespace CustomCrest
                 attackPromptIconLabel = ActionButtonIconLabelField == null || icon == null
                     ? null
                     : ActionButtonIconLabelField.GetValue(icon) as TMP_Text;
+                attackPromptIconLabelBaseColor = attackPromptIconLabel == null ? Color.white : attackPromptIconLabel.color;
                 attackPromptIconTextContainer = ActionButtonIconTextContainerField == null || icon == null
                     ? null
                     : ActionButtonIconTextContainerField.GetValue(icon) as TextContainer;
@@ -1415,7 +1447,12 @@ namespace CustomCrest
             {
                 SetClonedPromptText();
                 ConfigureAttackPromptIcon();
-                attackPrompt.SetActive(crestList != null && crestList.IsSwitchingCrests);
+                bool visible = crestList != null && crestList.IsSwitchingCrests;
+                attackPrompt.SetActive(visible);
+                if (visible && !ShouldFollowCrestSwitcherClose)
+                {
+                    SetAttackPromptAlpha(1f);
+                }
             }
         }
 
@@ -1424,7 +1461,14 @@ namespace CustomCrest
             GameObject promptObject = GetComboButtonPromptObject();
             if (promptObject != null)
             {
-                promptObject.SetActive(!IsAttackSwitcherVisible);
+                if (crestList != null && crestList.IsSwitchingCrests)
+                {
+                    promptObject.SetActive(false);
+                }
+                else if (attackSwitcherOpen || ShouldFollowCrestSwitcherClose || ShouldSuppressCrestDescriptionAfterClose)
+                {
+                    promptObject.SetActive(false);
+                }
             }
         }
 
@@ -1471,6 +1515,56 @@ namespace CustomCrest
                 ShrinkDescriptionWidth(description);
                 SetRenderersEnabled(description.transform, visible);
             }
+
+            SetCrestComboButtonPromptVisible(visible);
+        }
+
+        private void SetCrestComboButtonPromptVisible(bool visible)
+        {
+            GameObject promptObject = GetCrestComboButtonPromptObject();
+            if (promptObject == null)
+            {
+                return;
+            }
+
+            if (!visible)
+            {
+                if (IsAttackSwitcherVisible && !crestComboButtonPromptHiddenForAttackPanel)
+                {
+                    crestComboButtonPromptVisibleBeforeHide = promptObject.activeSelf;
+                    crestComboButtonPromptHiddenForAttackPanel = true;
+                }
+
+                promptObject.SetActive(false);
+                return;
+            }
+
+            if (crestComboButtonPromptHiddenForAttackPanel && crestComboButtonPromptVisibleBeforeHide.HasValue)
+            {
+                promptObject.SetActive(crestComboButtonPromptVisibleBeforeHide.Value);
+            }
+
+            ClearCrestComboButtonPromptRestoreState();
+        }
+
+        private void ClearCrestComboButtonPromptRestoreState()
+        {
+            crestComboButtonPromptVisibleBeforeHide = null;
+            crestComboButtonPromptHiddenForAttackPanel = false;
+        }
+
+        private GameObject GetCrestComboButtonPromptObject()
+        {
+            if (crestComboButtonPromptObject != null)
+            {
+                return crestComboButtonPromptObject;
+            }
+
+            Component promptDisplay = CrestListComboButtonPromptDisplayField == null || crestList == null
+                ? null
+                : CrestListComboButtonPromptDisplayField.GetValue(crestList) as Component;
+            crestComboButtonPromptObject = promptDisplay == null ? null : promptDisplay.gameObject;
+            return crestComboButtonPromptObject;
         }
 
         private bool IsCrestSwitchSequenceRunning()
@@ -1555,19 +1649,79 @@ namespace CustomCrest
             neutralButton?.SetPanelAlpha(panelAlpha);
             dashButton?.SetPanelAlpha(panelAlpha);
             needleStrikeButton?.SetPanelAlpha(panelAlpha);
-            if (attackPromptLabel != null)
+            SetAttackPromptAlpha(panelAlpha);
+        }
+
+        private void SetAttackPromptAlpha(float alpha)
+        {
+            ApplyAttackPromptVisualState(alpha, CanUseAttackSourceControls());
+        }
+
+        private bool CanUseAttackSourceControls()
+        {
+            return Plugin.Instance == null || Plugin.Instance.CanChangeAttackSources();
+        }
+
+        private void ApplyAttackPromptVisualState(float alpha, bool enabled)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            SetTextColor(attackPromptLabel, GetPromptColor(GetSourcePromptLabelColor(), alpha, enabled));
+            SetTextColor(attackPromptIconLabel, GetPromptColor(GetSourcePromptIconLabelColor(), alpha, enabled));
+
+            if (attackPromptIconTransform == null)
             {
-                Color color = attackPromptLabel.color;
-                color.a = panelAlpha;
-                attackPromptLabel.color = color;
+                return;
             }
 
-            if (attackPromptIconLabel != null)
+            Color iconColor = GetPromptColor(GetSourcePromptIconColor(), alpha, enabled);
+            SpriteRenderer[] renderers = attackPromptIconTransform.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
             {
-                Color color = attackPromptIconLabel.color;
-                color.a = panelAlpha;
-                attackPromptIconLabel.color = color;
+                if (renderers[i] != null)
+                {
+                    renderers[i].color = iconColor;
+                }
             }
+        }
+
+        private Color GetSourcePromptLabelColor()
+        {
+            return sourcePromptLabel == null ? attackPromptLabelBaseColor : sourcePromptLabel.color;
+        }
+
+        private Color GetSourcePromptIconLabelColor()
+        {
+            return sourcePromptIconLabel == null ? attackPromptIconLabelBaseColor : sourcePromptIconLabel.color;
+        }
+
+        private Color GetSourcePromptIconColor()
+        {
+            if (sourcePromptIconTransform == null)
+            {
+                return Color.white;
+            }
+
+            SpriteRenderer renderer = sourcePromptIconTransform.GetComponentInChildren<SpriteRenderer>(true);
+            return renderer == null ? Color.white : renderer.color;
+        }
+
+        private static Color GetPromptColor(Color baseColor, float alpha, bool enabled)
+        {
+            return new Color(
+                baseColor.r,
+                baseColor.g,
+                baseColor.b,
+                baseColor.a * Mathf.Clamp01(alpha));
+        }
+
+        private static void SetTextColor(TMP_Text text, Color color)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.color = color;
         }
 
         private void ShrinkDescriptionWidth(TextMeshPro description)
@@ -1647,8 +1801,8 @@ namespace CustomCrest
             InventoryAttackSourcePanel panel = panelObject.AddComponent<InventoryAttackSourcePanel>();
             panel.crestList = crestList;
             panel.upButton = CreateRow(panelObject.transform, template, AttackSlot.Up, "Up", LeftColumnX, 0.48f);
-            panel.downButton = CreateRow(panelObject.transform, template, AttackSlot.Down, "Down", LeftColumnX, 0f);
-            panel.neutralButton = CreateRow(panelObject.transform, template, AttackSlot.Neutral, "Neutral", LeftColumnX, -0.48f);
+            panel.neutralButton = CreateRow(panelObject.transform, template, AttackSlot.Neutral, "Neutral", LeftColumnX, 0f);
+            panel.downButton = CreateRow(panelObject.transform, template, AttackSlot.Down, "Down", LeftColumnX, -0.48f);
             panel.dashButton = CreateRow(panelObject.transform, template, AttackSlot.Dash, "Dash", RightColumnX, 0.48f);
             panel.needleStrikeButton = CreateRow(panelObject.transform, template, AttackSlot.NeedleStrike, "Strike", RightColumnX, 0f);
             panel.SetRowsActive(false);
@@ -1666,9 +1820,9 @@ namespace CustomCrest
             InventoryToolCrestSlot lowestSlot;
             GetVerticalCrestSlots(out highestSlot, out lowestSlot);
 
-            ConfigureButton(upButton, lowestSlot ?? crestEntry, downButton, viewCrestsButton ?? crestEntry, dashButton ?? toolEntry ?? crestEntry);
-            ConfigureButton(downButton, upButton, neutralButton, viewCrestsButton ?? crestEntry, needleStrikeButton ?? toolEntry ?? crestEntry);
-            ConfigureButton(neutralButton, downButton, highestSlot ?? crestEntry, viewCrestsButton ?? crestEntry, needleStrikeButton ?? toolEntry ?? crestEntry);
+            ConfigureButton(upButton, lowestSlot ?? crestEntry, neutralButton, viewCrestsButton ?? crestEntry, dashButton ?? toolEntry ?? crestEntry);
+            ConfigureButton(neutralButton, upButton, downButton, viewCrestsButton ?? crestEntry, needleStrikeButton ?? toolEntry ?? crestEntry);
+            ConfigureButton(downButton, neutralButton, highestSlot ?? crestEntry, viewCrestsButton ?? crestEntry, needleStrikeButton ?? toolEntry ?? crestEntry);
             ConfigureButton(dashButton, lowestSlot ?? crestEntry, needleStrikeButton, upButton ?? viewCrestsButton ?? crestEntry, toolEntry ?? crestEntry);
             ConfigureButton(needleStrikeButton, dashButton, highestSlot ?? crestEntry, downButton ?? viewCrestsButton ?? crestEntry, toolEntry ?? crestEntry);
             ConfigureCrestEntry(crestEntry);
@@ -1742,7 +1896,12 @@ namespace CustomCrest
 
         private InventoryAttackSourceButton GetPreferredPanelEntry()
         {
-            return lastSelectedButton ?? downButton ?? upButton ?? neutralButton ?? dashButton ?? needleStrikeButton;
+            return lastSelectedButton ?? GetFirstPanelEntry();
+        }
+
+        private InventoryAttackSourceButton GetFirstPanelEntry()
+        {
+            return upButton ?? neutralButton ?? downButton ?? dashButton ?? needleStrikeButton;
         }
 
         private InventoryItemSelectable FindViewCrestsButton()

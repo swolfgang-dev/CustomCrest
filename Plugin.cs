@@ -22,9 +22,16 @@ namespace CustomCrest
         private static readonly Harmony Harmony = new Harmony(PluginGuid);
         private static readonly FieldInfo CrestEquipMsgField =
             AccessTools.Field(typeof(InventoryItemToolManager), "crestEquipMsg");
+        private static readonly FieldInfo ToolManagerChangeCrestPromptField =
+            AccessTools.Field(typeof(InventoryItemToolManager), "changeCrestPrompt");
+        private static readonly FieldInfo ToolManagerSelectCrestPromptField =
+            AccessTools.Field(typeof(InventoryItemToolManager), "selectCrestPrompt");
+        private static readonly FieldInfo ToolManagerEquipPromptField =
+            AccessTools.Field(typeof(InventoryItemToolManager), "equipPrompt");
         private const string CrestBenchMessage = "Change Crests while resting at a bench.";
         private const string AttackBenchMessage = "Change attacks while resting at a bench.";
         private static bool showAttackBenchMessageOnce;
+        private static bool blockNextCrestApplyAfterAttackBenchMessage;
 
         private static readonly AttackSource[] SelectableAttackSources =
         {
@@ -100,6 +107,7 @@ namespace CustomCrest
             }
 
             showAttackBenchMessageOnce = true;
+            blockNextCrestApplyAfterAttackBenchMessage = true;
             manager.ShowCrestEquipMsg();
         }
 
@@ -274,31 +282,31 @@ namespace CustomCrest
             AttackSource defaultSource = GetDefaultAttackSourceForCrest(crestId);
             crestConfig = new CrestAttackSourceConfig
             {
-                Neutral = saveConfig.Bind(
-                    section,
-                    "Neutral Attack",
-                    defaultSource,
-                    CreateAttackSourceDescription("Crest to copy neutral attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 10)),
                 Up = saveConfig.Bind(
                     section,
                     "Up Attack",
                     defaultSource,
-                    CreateAttackSourceDescription("Crest to copy up attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 30)),
+                    CreateAttackSourceDescription("Crest to copy up attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 50)),
+                Neutral = saveConfig.Bind(
+                    section,
+                    "Neutral Attack",
+                    defaultSource,
+                    CreateAttackSourceDescription("Crest to copy neutral attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 40)),
                 Down = saveConfig.Bind(
                     section,
                     "Down Attack",
                     defaultSource,
-                    CreateAttackSourceDescription("Crest to copy down attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 20)),
+                    CreateAttackSourceDescription("Crest to copy down attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 30)),
                 Dash = saveConfig.Bind(
                     section,
                     "Dash Attack",
                     defaultSource,
-                    CreateAttackSourceDescription("Crest to copy dash attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 40)),
+                    CreateAttackSourceDescription("Crest to copy dash attack behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 20)),
                 NeedleStrike = saveConfig.Bind(
                     section,
                     "Needle Strike",
                     defaultSource,
-                    CreateAttackSourceDescription("Crest to copy Needle Strike behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 50)),
+                    CreateAttackSourceDescription("Crest to copy Needle Strike behavior from for " + GetCrestDisplayName(crestId) + " on this save.", crestOrder, 10)),
             };
             saveAttackSourcesByCrest[crestId] = crestConfig;
             return crestConfig;
@@ -636,6 +644,26 @@ namespace CustomCrest
         {
             private static bool Prefix()
             {
+                if (blockNextCrestApplyAfterAttackBenchMessage)
+                {
+                    if (IsAnyCrestEquipMessageShowing())
+                    {
+                        if (!IsBenchMessageCancelInputPressed())
+                        {
+                            Log?.LogInfo("Custom Crest blocking InventoryToolCrestList.Update while attack bench message is showing.");
+                            return false;
+                        }
+
+                        blockNextCrestApplyAfterAttackBenchMessage = false;
+                        Log?.LogInfo("Custom Crest allowing cancel while attack bench message is showing.");
+                    }
+                    else
+                    {
+                        blockNextCrestApplyAfterAttackBenchMessage = false;
+                        Log?.LogInfo("Custom Crest cleared attack bench close block after message disappeared.");
+                    }
+                }
+
                 if (InventoryAttackSourcePanel.IsAnyAttackSwitcherOpen)
                 {
                     Log?.LogInfo("Custom Crest blocking InventoryToolCrestList.Update because attack switcher is open.");
@@ -660,7 +688,7 @@ namespace CustomCrest
         [HarmonyPatch(typeof(InventoryToolCrestList), "StopSwitchingCrests")]
         private static class InventoryToolCrestListStopSwitchingCrestsPatch
         {
-            private static bool Prefix(bool keepNewSelection)
+            private static bool Prefix(InventoryToolCrestList __instance, bool keepNewSelection)
             {
                 Log?.LogInfo(
                     "Custom Crest StopSwitchingCrests prefix: keepNewSelection=" + keepNewSelection +
@@ -668,6 +696,15 @@ namespace CustomCrest
                 if (InventoryAttackSourcePanel.ConsumePendingCrestSwitcherCancel())
                 {
                     Log?.LogInfo("Custom Crest StopSwitchingCrests blocked by pending cancel consumption.");
+                    return false;
+                }
+
+                if (blockNextCrestApplyAfterAttackBenchMessage && keepNewSelection)
+                {
+                    HideAnyCrestEquipMessage();
+                    InventoryAttackSourcePanel.AttachOrRefresh(__instance);
+                    blockNextCrestApplyAfterAttackBenchMessage = false;
+                    Log?.LogInfo("Custom Crest blocked crest switcher close after attack bench message fallback.");
                     return false;
                 }
 
@@ -746,6 +783,11 @@ namespace CustomCrest
         {
             private static bool Prefix()
             {
+                if (ConsumeAttackBenchMessageSubmit())
+                {
+                    return false;
+                }
+
                 bool prepared = InventoryAttackSourcePanel.PrepareVanillaCrestSubmitFromOpenAttackSwitcher();
                 if (prepared)
                 {
@@ -753,6 +795,100 @@ namespace CustomCrest
                 }
 
                 return !prepared;
+            }
+
+            private static void Postfix()
+            {
+                if (!blockNextCrestApplyAfterAttackBenchMessage)
+                {
+                    return;
+                }
+
+                blockNextCrestApplyAfterAttackBenchMessage = false;
+                Log?.LogInfo("Custom Crest cleared unused attack bench crest apply block after submit.");
+            }
+        }
+
+        private static bool ConsumeAttackBenchMessageSubmit()
+        {
+            if (!blockNextCrestApplyAfterAttackBenchMessage)
+            {
+                return false;
+            }
+
+            if (HideAnyCrestEquipMessage())
+            {
+                blockNextCrestApplyAfterAttackBenchMessage = false;
+                Log?.LogInfo("Custom Crest consumed submit to close attack bench message.");
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsAnyCrestEquipMessageShowing()
+        {
+            InventoryItemToolManager[] managers = Resources.FindObjectsOfTypeAll<InventoryItemToolManager>();
+            for (int i = 0; i < managers.Length; i++)
+            {
+                InventoryItemToolManager manager = managers[i];
+                if (manager != null && manager.ShowingCrestMsg)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsBenchMessageCancelInputPressed()
+        {
+            return Input.GetKeyDown(KeyCode.JoystickButton1) ||
+                Input.GetKeyDown(KeyCode.Escape) ||
+                Input.GetKeyDown(KeyCode.Backspace);
+        }
+
+        private static bool HideAnyCrestEquipMessage()
+        {
+            InventoryItemToolManager[] managers = Resources.FindObjectsOfTypeAll<InventoryItemToolManager>();
+            for (int i = 0; i < managers.Length; i++)
+            {
+                InventoryItemToolManager manager = managers[i];
+                if (manager == null || !manager.ShowingCrestMsg)
+                {
+                    continue;
+                }
+
+                manager.HideCrestEquipMsg(false);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void RestoreCrestSwitcherPrompts(InventoryToolCrestList crestList)
+        {
+            InventoryItemToolManager manager = crestList == null
+                ? null
+                : crestList.GetComponentInParent<InventoryItemToolManager>(true);
+            if (manager == null)
+            {
+                return;
+            }
+
+            SetPromptActive(ToolManagerChangeCrestPromptField, manager, true);
+            SetPromptActive(ToolManagerSelectCrestPromptField, manager, true);
+            SetPromptActive(ToolManagerEquipPromptField, manager, false);
+        }
+
+        private static void SetPromptActive(FieldInfo field, InventoryItemToolManager manager, bool active)
+        {
+            Component prompt = field == null || manager == null
+                ? null
+                : field.GetValue(manager) as Component;
+            if (prompt != null)
+            {
+                prompt.gameObject.SetActive(active);
             }
         }
 
